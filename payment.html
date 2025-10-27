@@ -168,39 +168,79 @@
                         // Set favicon and page title
                         SharedUtils.initShared(this.config, 'Pembayaran');
 
-                        // Generate dynamic QRIS
-                        const dynamicQRIS = QRIS.generateDynamic(this.orderData.qris_string, this.orderData.price);
+                        // Use QRIS string from qris.js (not from backend)
+                        console.log('Using static QRIS from qris.js');
+                        console.log('QRIS String Length:', STATIC_QRIS_STRING.length);
+                        
+                        // Generate dynamic QRIS with amount
+                        const dynamicQRIS = QRIS.generateDynamic(STATIC_QRIS_STRING, this.orderData.price);
+                        
+                        console.log('Dynamic QRIS Length:', dynamicQRIS?.length);
+                        console.log('Dynamic QRIS (first 200 chars):', dynamicQRIS?.substring(0, 200));
 
-                        // Generate QR Code with qrcode-generator library
+                        // Generate QR Code with fallback
                         setTimeout(() => {
                             const qrcodeContainer = document.getElementById("qrcode");
                             if (qrcodeContainer) {
-                                // Clear container first
                                 qrcodeContainer.innerHTML = '';
                                 
-                                try {
-                                    // Use qrcode-generator library (supports longer strings)
-                                    const typeNumber = 0; // Auto-detect best version
-                                    const errorCorrectionLevel = 'L'; // Low error correction
-                                    const qr = qrcode(typeNumber, errorCorrectionLevel);
-                                    qr.addData(dynamicQRIS);
-                                    qr.make();
+                                // Check if QRIS string is too long
+                                if (dynamicQRIS.length > 1000) {
+                                    console.warn('QRIS string too long:', dynamicQRIS.length, 'chars');
                                     
-                                    // Create image with larger cell size for better scanning
-                                    const cellSize = 4;
-                                    const margin = 2;
-                                    qrcodeContainer.innerHTML = qr.createImgTag(cellSize, margin);
-                                    
-                                    // Style the image
-                                    const img = qrcodeContainer.querySelector('img');
-                                    if (img) {
-                                        img.style.width = '100%';
-                                        img.style.maxWidth = '300px';
-                                        img.style.height = 'auto';
+                                    // Fallback: Show QRIS as copyable text
+                                    qrcodeContainer.innerHTML = `
+                                        <div class="text-center p-4">
+                                            <div class="bg-yellow-900/30 border border-yellow-600 rounded-lg p-4 mb-4">
+                                                <p class="text-yellow-400 text-sm mb-2">⚠️ QRIS string terlalu panjang untuk QR Code (${dynamicQRIS.length} chars)</p>
+                                                <p class="text-gray-400 text-xs">Gunakan QRIS string di bawah untuk pembayaran manual</p>
+                                            </div>
+                                            <div class="bg-gray-700 p-3 rounded text-xs break-all text-left">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="text-gray-400">QRIS String:</span>
+                                                    <button onclick="navigator.clipboard.writeText('${dynamicQRIS}')" class="text-blue-400 hover:text-blue-300 text-xs">Copy</button>
+                                                </div>
+                                                <code class="text-green-400">${dynamicQRIS}</code>
+                                            </div>
+                                        </div>
+                                    `;
+                                } else {
+                                    try {
+                                        // Try to generate QR code
+                                        const qr = qrcode(0, 'L');
+                                        qr.addData(dynamicQRIS);
+                                        qr.make();
+                                        
+                                        const cellSize = 4;
+                                        const margin = 2;
+                                        qrcodeContainer.innerHTML = qr.createImgTag(cellSize, margin);
+                                        
+                                        const img = qrcodeContainer.querySelector('img');
+                                        if (img) {
+                                            img.style.width = '100%';
+                                            img.style.maxWidth = '300px';
+                                            img.style.height = 'auto';
+                                        }
+                                    } catch (error) {
+                                        console.error('QR Code generation error:', error);
+                                        
+                                        // Fallback on error
+                                        qrcodeContainer.innerHTML = `
+                                            <div class="text-center p-4">
+                                                <div class="bg-red-900/30 border border-red-600 rounded-lg p-4 mb-4">
+                                                    <p class="text-red-400 text-sm mb-2">❌ Gagal generate QR Code</p>
+                                                    <p class="text-gray-400 text-xs">${error.message}</p>
+                                                </div>
+                                                <div class="bg-gray-700 p-3 rounded text-xs break-all text-left">
+                                                    <div class="flex justify-between items-center mb-2">
+                                                        <span class="text-gray-400">QRIS String (copy manual):</span>
+                                                        <button onclick="navigator.clipboard.writeText('${dynamicQRIS}')" class="text-blue-400 hover:text-blue-300 text-xs">Copy</button>
+                                                    </div>
+                                                    <code class="text-green-400">${dynamicQRIS.substring(0, 500)}...</code>
+                                                </div>
+                                            </div>
+                                        `;
                                     }
-                                } catch (error) {
-                                    console.error('QR Code generation error:', error);
-                                    qrcodeContainer.innerHTML = '<div class="text-red-500 text-center p-4">Error: ' + error.message + '</div>';
                                 }
                             }
                         }, 100);
