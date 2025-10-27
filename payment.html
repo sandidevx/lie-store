@@ -14,8 +14,8 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
-    <!-- QRCode.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- QRCode.js - Using newer library that supports longer strings -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     
     <!-- Tailwind Config -->
     <script>
@@ -171,16 +171,38 @@
                         // Generate dynamic QRIS
                         const dynamicQRIS = QRIS.generateDynamic(this.orderData.qris_string, this.orderData.price);
 
-                        // Generate QR Code
+                        // Generate QR Code with qrcode-generator library
                         setTimeout(() => {
-                            new QRCode(document.getElementById("qrcode"), {
-                                text: dynamicQRIS,
-                                width: 256,
-                                height: 256,
-                                colorDark: "#000000",
-                                colorLight: "#ffffff",
-                                correctLevel: QRCode.CorrectLevel.H
-                            });
+                            const qrcodeContainer = document.getElementById("qrcode");
+                            if (qrcodeContainer) {
+                                // Clear container first
+                                qrcodeContainer.innerHTML = '';
+                                
+                                try {
+                                    // Use qrcode-generator library (supports longer strings)
+                                    const typeNumber = 0; // Auto-detect best version
+                                    const errorCorrectionLevel = 'L'; // Low error correction
+                                    const qr = qrcode(typeNumber, errorCorrectionLevel);
+                                    qr.addData(dynamicQRIS);
+                                    qr.make();
+                                    
+                                    // Create image with larger cell size for better scanning
+                                    const cellSize = 4;
+                                    const margin = 2;
+                                    qrcodeContainer.innerHTML = qr.createImgTag(cellSize, margin);
+                                    
+                                    // Style the image
+                                    const img = qrcodeContainer.querySelector('img');
+                                    if (img) {
+                                        img.style.width = '100%';
+                                        img.style.maxWidth = '300px';
+                                        img.style.height = 'auto';
+                                    }
+                                } catch (error) {
+                                    console.error('QR Code generation error:', error);
+                                    qrcodeContainer.innerHTML = '<div class="text-red-500 text-center p-4">Error: ' + error.message + '</div>';
+                                }
+                            }
                         }, 100);
 
                     } catch (err) {
