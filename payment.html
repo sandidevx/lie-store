@@ -100,6 +100,17 @@
                 </p>
             </div>
 
+            <!-- Download QR Button -->
+            <button @click="downloadQRCode()" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition mb-4">
+                <div class="flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    <span>Download QR Code</span>
+                </div>
+            </button>
+
             <!-- Instructions -->
             <div class="bg-blue-900/30 border border-blue-700 rounded-lg p-6 mb-6">
                 <h3 class="text-lg font-semibold text-white mb-3">Cara Pembayaran:</h3>
@@ -259,6 +270,54 @@
                 generateWhatsAppLink() {
                     const message = `Halo Admin,\n\nSaya sudah melakukan pembayaran:\n- Order ID: ${this.orderData.order_id}\n- Produk: ${this.orderData.product_name}\n- Nominal: ${this.formatPrice(this.orderData.price)}\n\nNama: ${this.orderData.customer_name}\nEmail: ${this.orderData.customer_email}\n\nMohon diproses segera. Terima kasih!`;
                     return `https://wa.me/${this.config.whatsapp_number}?text=${encodeURIComponent(message)}`;
+                },
+
+
+                downloadQRCode() {
+                    try {
+                        const qrcodeContainer = document.getElementById('qrcode');
+                        const img = qrcodeContainer.querySelector('img');
+                        
+                        if (!img) {
+                            alert('QR Code belum tersedia. Silakan tunggu sebentar atau screenshot manual.');
+                            return;
+                        }
+
+                        // Create canvas from image
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Wait for image to load
+                        const image = new Image();
+                        image.crossOrigin = 'anonymous';
+                        image.src = img.src;
+                        
+                        image.onload = () => {
+                            canvas.width = image.width;
+                            canvas.height = image.height;
+                            ctx.drawImage(image, 0, 0);
+                            
+                            // Convert to blob and download
+                            canvas.toBlob((blob) => {
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `QRIS-${this.orderData.order_id}.png`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                            }, 'image/png');
+                        };
+                        
+                        image.onerror = () => {
+                            alert('Gagal download QR Code. Silakan screenshot manual.');
+                        };
+                        
+                    } catch (error) {
+                        console.error('Download error:', error);
+                        alert('Gagal download QR Code: ' + error.message);
+                    }
                 }
             }
         }
